@@ -1,76 +1,64 @@
 require 'csv'
 
 # Represents a person in an address book.
-# The ContactList class will work with Contact objects instead of interacting with the CSV file directly
 class Contact
 
-  attr_accessor :name, :email
-  attr_reader :id
-  
-  # Creates a new contact object
-  # @param name [String] The contact's name
-  # @param email [String] The contact's email address
-  def initialize(name, email, id=nil)
-    # TODO: Assign parameter values to instance variables.
+  attr_accessor :id, :name, :email, :phones
+
+  def initialize(id, name, email, phones)
+    @id = id
     @name = name
     @email = email
-    @id = id
+    @phones = phones
   end
 
-  def to_s
-    "#{@id}: #{@name} (#{email})"
-  end
-
-  # Provides functionality for managing contacts in the csv file.
+  # Provides functionality for managing a list of Contacts in a database.
   class << self
 
-    # Opens 'contacts.csv' and creates a Contact object for each line in the file (aka each contact).
-    # @return [Array<Contact>] Array of Contact objects
+    @@file_path = 'contacts.csv'
+
+    # Returns an Array of Contacts loaded from the database.
     def all
-      results = []
-      current_id = 1
-      CSV.foreach('contacts.csv') do |row|
-        results << Contact.new(row[0], row[1], current_id)
-        current_id = current_id + 1
-      end
-      results
-      # TODO: Return an Array of Contact instances made from the data in 'contacts.csv'.
+      CSV.read(@@file_path).map { |row| Contact.new(row[0].to_i, row[1], row[2], deserialize_phones(row[3])) }
     end
 
-    # Creates a new contact, adding it to the csv file, returning the new contact.
-    # @param name [String] the new contact's name
-    # @param email [String] the contact's email
-    def create(name, email)
-      # TODO: Instantiate a Contact, add its data to the 'contacts.csv' file, and return it.
-      
-      CSV.open("contacts.csv", "a") do |csv|
-        csv << [name, email]
-      end
+    # Creates a new contact, adding it to the database, returning the new contact.
+    def create(name, email, phones)
+      raise 'A contact with that email already exists' if all.any? { |contact| contact.email == email }
+      contact = Contact.new(next_id, name, email, phones)
+      CSV.open(@@file_path, 'a') { |csv| csv << [contact.id, contact.name, contact.email, serialize_phones(contact.phones)] }
+      contact
     end
-    
-    # Find the Contact in the 'contacts.csv' file with the matching id.
-    # @param id [Integer] the contact id
-    # @return [Contact, nil] the contact with the specified id. If no contact has the id, returns nil.
+
+    # Returns the id that should be assigned to the next contact that is created.
+    def next_id
+      (all.map(&:id).max || 0) + 1
+    end
+
+    # Returns the contact with the specified id. If no contact has the id, returns nil.
     def find(id)
-      # TODO: Find the Contact in the 'contacts.csv' file with the matching id.
-      result = []
-      CSV.parse(id) { result << Contact.new(row[0], row[1], current_id)}
+      all.find { |contact| contact.id == id }
     end
-    
-    # Search for contacts by either name or email.
-    # @param term [String] the name fragment or email fragment to search for
-    # @return [Array<Contact>] Array of Contact objects.
+
+    # Returns an array of contacts who match the given term.
     def search(term)
-      # TODO: Select the Contact instances from the 'contacts.csv' file whose name or email attributes contain 
-      # the search term.
-      CSV.foreach('contacts.csv') do |look|
-        puts look.inspect
+      all.select { |contact| contact.name.include?(term) || contact.email.include?(term) }
+    end
+
+    def serialize_phones(phones)
+      (phones || []).map { |phone| "#{phone[:type]}:#{phone[:number]}" }.join(';')
+    end
+
+    def deserialize_phones(string)
+      (string || '').split(';').map do |substring|
+        parts = substring.split(':')
+        {
+          type: parts[0],
+          number: parts[1]
+        }
       end
     end
 
   end
 
 end
-
-# Contact.create('Dania Traverse', 'dania@gmail.com')
-# puts Contact.all
