@@ -14,6 +14,7 @@ class ContactList
     when 'list' then list
     when 'show' then show(args[1].to_i)
     when 'search' then search(args[1])
+    when 'update' then update(arg)    
     else help
     end
   end
@@ -24,7 +25,8 @@ class ContactList
     new    - Create a new contact
     list   - List all contacts
     show   - Show a contact
-    search - Search contacts'
+    search - Search contacts
+    update - Update existing contact'
   end
 
   # Creates a new contact in the contact list from user input via standard in, displaying the new
@@ -34,24 +36,8 @@ class ContactList
     name = $stdin.gets.chomp
     print 'Email: '
     email = $stdin.gets.chomp
-    phones = []
-    while enter_a_phone_number?
-      print 'Type: '
-      type = $stdin.gets.chomp
-      print 'Number: '
-      number = $stdin.gets.chomp
-      phones << {
-        type: type,
-        number: number
-      }
-    end
-    contact = Contact.create(name, email, phones)
+    contact = Contact.create(name, email)
     puts "Contact #{contact.id} created"
-  end
-
-  def enter_a_phone_number?
-    print 'Enter a phone number? (yes/no) '
-    $stdin.gets.chomp == 'yes'
   end
 
   # Displays information about all the contacts in the list.
@@ -90,9 +76,14 @@ class ContactList
   def full_contact(contact)
     "ID: #{contact.id}\n" +
     "Name: #{contact.name}\n" +
-    "Email: #{contact.email}\n" +
-    "Phones: \n" +
-    contact.phones.map { |phone| "    Type: #{phone[:type]}\n    Number: #{phone[:number]}\n" }.join
+    "Email: #{contact.email}\n"
+  end
+
+  def update(by_id)
+    entry = by_id.find
+    entry.name = new_name
+    entry.email = new_email
+    entry.save
   end
 
 end
